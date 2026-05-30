@@ -11,9 +11,12 @@ import {
   type User,
 } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase";
+import { ensureUserProfile, profileToAuthUser, type UserProfile } from "@/lib/social";
 
 type AuthUser = {
+  uid: string;
   id: string;
+  friendId: string;
   name: string;
   email: string;
   picture?: string;
@@ -42,7 +45,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function mapFirebaseUser(user: User): AuthUser {
   return {
+    uid: user.uid,
     id: user.uid,
+    friendId: `UID-${user.uid.slice(0, 8).toUpperCase()}`,
     name: user.displayName || user.email || "匿名旅者",
     email: user.email || "",
     picture: user.photoURL || undefined,
@@ -55,11 +60,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (firebaseUser) => {
-      setUser(firebaseUser ? mapFirebaseUser(firebaseUser) : null);
+    let active = true;
+
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUser(null);
+        return;
+      }
+
+      try {
+        const profile: UserProfile = await ensureUserProfile(firebaseUser);
+
+        if (active) {
+          setUser({
+            ...profileToAuthUser(profile),
+            emailVerified: firebaseUser.emailVerified,
+          });
+        }
+      } catch {
+        if (active) {
+          setUser(mapFirebaseUser(firebaseUser));
+        }
+      }
     });
 
-    return unsubscribe;
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   const loginWithGoogle = async () => {

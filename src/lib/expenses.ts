@@ -12,6 +12,12 @@ export type ExpenseRecord = {
   secretNote: string;
   photoUrl?: string;
   photoPath?: string;
+  likeCount?: number;
+  commentCount?: number;
+  upvoteCount?: number;
+  downvoteCount?: number;
+  plazaScore?: number;
+  expiresAt?: string;
   createdAt: string;
 };
 
@@ -120,7 +126,15 @@ async function uploadExpensePhotoToStorage(
   await updateDoc(expenseRef, stripUndefined({ photoUrl, photoPath }));
 }
 
-function mapExpenseDoc(id: string, data: Record<string, unknown>): ExpenseRecord {
+export function mapExpenseDoc(id: string, data: Record<string, unknown>): ExpenseRecord {
+  const createdAt = typeof data.createdAt === "string" ? data.createdAt : new Date().toISOString();
+  const visibility = data.visibility === "public" || data.visibility === "friends" ? data.visibility : "private";
+  const expiresAt = typeof data.expiresAt === "string"
+    ? data.expiresAt
+    : visibility === "public"
+      ? new Date(new Date(createdAt).getTime() + 12 * 60 * 60 * 1000).toISOString()
+      : undefined;
+
   return {
     id,
     userId: typeof data.userId === "string" ? data.userId : "",
@@ -131,11 +145,17 @@ function mapExpenseDoc(id: string, data: Record<string, unknown>): ExpenseRecord
     transactionType: data.transactionType === "income" ? "income" : "expense",
     category: typeof data.category === "string" ? data.category : "",
     mood: typeof data.mood === "string" ? data.mood : "😐",
-    visibility: data.visibility === "public" || data.visibility === "friends" ? data.visibility : "private",
+    visibility,
     secretNote: typeof data.secretNote === "string" ? data.secretNote : "",
     photoUrl: typeof data.photoUrl === "string" ? data.photoUrl : undefined,
     photoPath: typeof data.photoPath === "string" ? data.photoPath : undefined,
-    createdAt: typeof data.createdAt === "string" ? data.createdAt : new Date().toISOString(),
+    likeCount: typeof data.likeCount === "number" ? data.likeCount : Number(data.likeCount || 0),
+    commentCount: typeof data.commentCount === "number" ? data.commentCount : Number(data.commentCount || 0),
+    upvoteCount: typeof data.upvoteCount === "number" ? data.upvoteCount : Number(data.upvoteCount || 0),
+    downvoteCount: typeof data.downvoteCount === "number" ? data.downvoteCount : Number(data.downvoteCount || 0),
+    plazaScore: typeof data.plazaScore === "number" ? data.plazaScore : Number(data.plazaScore || 0),
+    expiresAt,
+    createdAt,
   };
 }
 
@@ -180,6 +200,14 @@ export async function createExpense(input: CreateExpenseInput): Promise<CreateEx
     mood: input.mood,
     visibility: input.visibility,
     secretNote: input.secretNote?.trim() || "",
+    likeCount: 0,
+    commentCount: 0,
+    upvoteCount: 0,
+    downvoteCount: 0,
+    plazaScore: 0,
+    expiresAt: input.visibility === "public"
+      ? new Date(new Date(createdAt).getTime() + 12 * 60 * 60 * 1000).toISOString()
+      : undefined,
     createdAt,
   };
 
@@ -229,6 +257,9 @@ export async function updateExpense(input: UpdateExpenseInput): Promise<ExpenseR
     mood: input.mood,
     visibility: input.visibility,
     secretNote: input.secretNote?.trim() || "",
+    expiresAt: input.visibility === "public"
+      ? new Date(new Date(current.createdAt).getTime() + 12 * 60 * 60 * 1000).toISOString()
+      : deleteField(),
   };
 
   await updateDoc(expenseRef, updates);

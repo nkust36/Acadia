@@ -7,6 +7,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
+import { ImagePreview } from "@/components/ImagePreview";
 import { createExpense, type ExpenseVisibility } from "@/lib/expenses";
 import { compressImageFile } from "@/lib/image";
 import { getCategoryIcon, watchCategories, type ExpenseCategory } from "@/lib/categories";
@@ -242,10 +243,13 @@ export default function AddExpense() {
         {photoDataUrl ? (
           <div className="space-y-3">
             <div className="relative overflow-hidden rounded-xl border border-border">
-              <img
+              <ImagePreview
                 src={photoDataUrl}
                 alt="已附上的記帳照片"
-                className="h-36 w-full object-cover"
+                triggerClassName="block w-full"
+                imageClassName="h-36 w-full object-cover"
+                previewClassName="max-h-[70vh] w-full object-contain"
+                title="已附上的記帳照片"
               />
               <button
                 type="button"

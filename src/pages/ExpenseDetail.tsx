@@ -6,6 +6,7 @@ import { zhTW } from "date-fns/locale";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
+import { ImagePreview } from "@/components/ImagePreview";
 import { deleteExpense, getExpense, updateExpense, type ExpenseRecord, type ExpenseVisibility } from "@/lib/expenses";
 import { compressImageFile } from "@/lib/image";
 import { loadCategories, type ExpenseCategory, getCategoryIcon } from "@/lib/categories";
@@ -305,7 +306,14 @@ export default function ExpenseDetail() {
 
         {currentPhoto ? (
           <div className="overflow-hidden rounded-xl border border-border">
-            <img src={currentPhoto} alt="記帳照片" className="h-56 w-full object-cover" />
+            <ImagePreview
+              src={currentPhoto}
+              alt="記帳照片"
+              triggerClassName="block w-full"
+              imageClassName="h-56 w-full object-cover"
+              previewClassName="max-h-[70vh] w-full object-contain"
+              title="記帳照片"
+            />
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border bg-background/60 p-8 text-center text-sm text-muted-foreground">
