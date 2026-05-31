@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
 import { ImagePreview } from "@/components/ImagePreview";
 import { createExpense, type ExpenseVisibility } from "@/lib/expenses";
+import { notifyBudgetAlertIfNeeded } from "@/lib/budget";
 import { compressImageFile } from "@/lib/image";
 import { getCategoryIcon, watchCategories, type ExpenseCategory } from "@/lib/categories";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
@@ -168,6 +169,8 @@ export default function AddExpense() {
       } else {
         toast.success("儲存成功");
       }
+
+      void notifyBudgetAlertIfNeeded(user.id);
 
       setAmount("");
       setExpenseDate(getTodayLocalDate());

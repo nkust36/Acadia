@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { addFeedComment, watchFeedComments, type FeedComment } from "@/lib/feed";
-import { loadPlazaPosts, purgeExpiredPublicPostsForViewer, votePlazaPost, type PlazaPost } from "@/lib/plaza";
+import { loadPlazaPosts, votePlazaPost, type PlazaPost } from "@/lib/plaza";
 
 function formatMoney(amount: number) {
   return `NT$ ${Math.abs(amount).toLocaleString()}`;
@@ -79,7 +79,6 @@ export default function Plaza() {
       setIsLoading(true);
 
       try {
-        await purgeExpiredPublicPostsForViewer(user).catch(() => undefined);
         const nextPosts = await loadPlazaPosts(user);
 
         if (active) {

@@ -1,6 +1,6 @@
 import { collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, orderBy, query, setDoc, updateDoc } from "firebase/firestore";
 import { firebaseDb } from "@/lib/firebase";
-import { deleteExpense, listExpenses, mapExpenseDoc, type ExpenseRecord } from "@/lib/expenses";
+import { mapExpenseDoc, type ExpenseRecord } from "@/lib/expenses";
 import { getUserProfileByUid, type UserProfile } from "@/lib/social";
 import { stripUndefined } from "@/lib/firestore";
 
@@ -26,6 +26,8 @@ type PlazaAuthor = {
   picture?: string;
 };
 
+type PlazaViewer = Pick<UserProfile, "uid">;
+
 function parseTime(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
@@ -41,15 +43,6 @@ function getExpiresAt(expense: ExpenseRecord) {
   }
 
   return new Date(parseTime(expense.createdAt) + 12 * 60 * 60 * 1000).toISOString();
-}
-
-function isExpired(expense: ExpenseRecord) {
-  const expiresAt = getExpiresAt(expense);
-  if (!expiresAt) {
-    return false;
-  }
-
-  return parseTime(expiresAt) <= Date.now();
 }
 
 function mapAuthor(profile: UserProfile | null, fallbackUid: string): PlazaAuthor {
@@ -69,10 +62,10 @@ function sortPlazaPosts(left: PlazaPost, right: PlazaPost) {
   return parseTime(right.expense.createdAt) - parseTime(left.expense.createdAt);
 }
 
-export async function loadPlazaPosts(viewer: UserProfile): Promise<PlazaPost[]> {
+export async function loadPlazaPosts(viewer: PlazaViewer): Promise<PlazaPost[]> {
   const snapshot = await getDocs(collectionGroup(firebaseDb, "items"));
   const expenseDocs = snapshot.docs.filter((entry) => entry.ref.parent.parent?.parent?.id === "expenses");
-  const expenses = expenseDocs.map((entry) => mapExpenseDoc(entry.id, entry.data())).filter((expense) => expense.visibility === "public" && !isExpired(expense));
+  const expenses = expenseDocs.map((entry) => mapExpenseDoc(entry.id, entry.data())).filter((expense) => expense.visibility === "public");
 
   const authorIds = [...new Set(expenses.map((expense) => expense.userId).filter(Boolean))];
   const authors = await Promise.all(authorIds.map(async (uid) => [uid, await getUserProfileByUid(uid)] as const));
@@ -106,7 +99,7 @@ export async function loadPlazaPosts(viewer: UserProfile): Promise<PlazaPost[]> 
   return posts.sort(sortPlazaPosts);
 }
 
-export async function votePlazaPost(input: { viewer: UserProfile; post: PlazaPost; vote: -1 | 1 }) {
+export async function votePlazaPost(input: { viewer: PlazaViewer; post: PlazaPost; vote: -1 | 1 }) {
   const expenseRef = doc(firebaseDb, "expenses", input.post.expense.userId, "items", input.post.expense.id);
   const voteRef = doc(firebaseDb, "expenses", input.post.expense.userId, "items", input.post.expense.id, PLAZA_VOTES_SUBCOLLECTION, input.viewer.uid);
   const currentVote = input.post.viewerVote;

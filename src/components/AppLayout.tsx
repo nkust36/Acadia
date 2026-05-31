@@ -1,13 +1,15 @@
 import { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, PlusCircle, Users, Globe, User } from "lucide-react";
+import { LayoutDashboard, PieChart, PlusCircle, Users, Globe, User, Bell } from "lucide-react";
 import { motion } from "framer-motion";
 
 const tabs = [
   { path: "/", icon: LayoutDashboard, label: "看板" },
+  { path: "/analysis", icon: PieChart, label: "分析" },
   { path: "/feed", icon: Users, label: "動態" },
   { path: "/add", icon: PlusCircle, label: "記帳" },
   { path: "/plaza", icon: Globe, label: "廣場" },
+  { path: "/notifications", icon: Bell, label: "通知" },
   { path: "/profile", icon: User, label: "我的" },
 ];
 

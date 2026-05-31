@@ -31,6 +31,9 @@ export type UserProfile = {
   provider: "google" | "email";
   createdAt: string;
   updatedAt: string;
+  monthlyBudgetAmount?: number;
+  monthlyBudgetMonthKey?: string;
+  budgetAlertMonthKey?: string;
 };
 
 export type FriendConnection = {
@@ -64,7 +67,7 @@ export type FriendRequest = {
 export type FriendNotification = {
   id: string;
   requestId: string;
-  type: "friend_request" | "friend_response" | "feed_like" | "feed_comment";
+  type: "friend_request" | "friend_response" | "feed_like" | "feed_comment" | "budget_alert" | "direct_message";
   status: FriendRequestStatus | "info";
   read: boolean;
   title: string;
@@ -105,6 +108,9 @@ function mapUserProfile(id: string, data: Record<string, unknown>): UserProfile 
     provider: data.provider === "google" ? "google" : "email",
     createdAt: readString(data.createdAt, new Date().toISOString()),
     updatedAt: readString(data.updatedAt, new Date().toISOString()),
+    monthlyBudgetAmount: typeof data.monthlyBudgetAmount === "number" ? data.monthlyBudgetAmount : undefined,
+    monthlyBudgetMonthKey: typeof data.monthlyBudgetMonthKey === "string" ? data.monthlyBudgetMonthKey : undefined,
+    budgetAlertMonthKey: typeof data.budgetAlertMonthKey === "string" ? data.budgetAlertMonthKey : undefined,
   };
 }
 
@@ -144,7 +150,7 @@ function mapFriendNotification(id: string, data: Record<string, unknown>): Frien
   const status = data.status === "accepted" || data.status === "rejected" || data.status === "info"
     ? data.status
     : "pending";
-  const type = data.type === "friend_response" || data.type === "feed_like" || data.type === "feed_comment"
+  const type = data.type === "friend_response" || data.type === "feed_like" || data.type === "feed_comment" || data.type === "budget_alert" || data.type === "direct_message"
     ? data.type
     : "friend_request";
 
@@ -186,6 +192,13 @@ async function generateUniqueFriendId() {
 
 export async function createUserNotification(userId: string, payload: Omit<FriendNotification, "id">) {
   await addDoc(collection(firebaseDb, NOTIFICATIONS_COLLECTION, userId, "items"), stripUndefined(payload));
+}
+
+export async function updateUserProfileFields(userId: string, updates: Record<string, unknown>) {
+  await updateDoc(doc(firebaseDb, USERS_COLLECTION, userId), stripUndefined({
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  }));
 }
 
 export function profileToAuthUser(profile: UserProfile) {
@@ -278,6 +291,13 @@ export async function listFriendConnections(userId: string): Promise<FriendConne
   const connectionsRef = collection(firebaseDb, FRIENDS_COLLECTION, userId, "items");
   const snapshot = await getDocs(query(connectionsRef, orderBy("createdAt", "desc")));
   return snapshot.docs.map((entry) => mapFriendConnection(entry.id, entry.data()));
+}
+
+export async function deleteFriendConnection(userId: string, friendUid: string) {
+  await Promise.all([
+    deleteDoc(doc(firebaseDb, FRIENDS_COLLECTION, userId, "items", friendUid)),
+    deleteDoc(doc(firebaseDb, FRIENDS_COLLECTION, friendUid, "items", userId)),
+  ]);
 }
 
 export function watchFriendNotifications(userId: string, onChange: (items: FriendNotification[]) => void) {

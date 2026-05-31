@@ -1,7 +1,8 @@
 import { collection, deleteDoc, doc, getDoc, increment, onSnapshot, orderBy, query, setDoc, updateDoc } from "firebase/firestore";
 import { firebaseDb } from "@/lib/firebase";
-import { listExpenses, deleteExpense, type ExpenseRecord } from "@/lib/expenses";
-import { createUserNotification, listFriendConnections, type UserProfile } from "@/lib/social";
+import { listExpenses, type ExpenseRecord } from "@/lib/expenses";
+import { createUserNotification, getUserProfileByUid, listFriendConnections, type UserProfile } from "@/lib/social";
+import { buildBudgetSnapshot } from "@/lib/budget";
 import { stripUndefined } from "@/lib/firestore";
 
 const COMMENTS_SUBCOLLECTION = "comments";
@@ -25,6 +26,7 @@ export type FeedPost = {
   isSelf: boolean;
   isFriend: boolean;
   likedByViewer: boolean;
+  authorOverBudget: boolean;
 };
 
 type FeedAuthor = {
@@ -33,6 +35,8 @@ type FeedAuthor = {
   name: string;
   picture?: string;
 };
+
+type FeedViewer = Pick<UserProfile, "uid" | "friendId" | "name" | "picture">;
 
 function parseTime(value: string) {
   const date = new Date(value);
@@ -79,7 +83,7 @@ function mapComment(id: string, data: Record<string, unknown>): FeedComment {
   };
 }
 
-function buildPost(expense: ExpenseRecord, author: FeedAuthor, viewerUid: string, likedByViewer: boolean): FeedPost {
+function buildPost(expense: ExpenseRecord, author: FeedAuthor, viewerUid: string, likedByViewer: boolean, authorOverBudget: boolean): FeedPost {
   const isSelf = author.uid === viewerUid;
   return {
     expense: {
@@ -93,10 +97,11 @@ function buildPost(expense: ExpenseRecord, author: FeedAuthor, viewerUid: string
     isSelf,
     isFriend: !isSelf,
     likedByViewer,
+    authorOverBudget,
   };
 }
 
-export async function loadFeedPosts(viewer: UserProfile): Promise<FeedPost[]> {
+export async function loadFeedPosts(viewer: FeedViewer): Promise<FeedPost[]> {
   const friends = await listFriendConnections(viewer.uid);
   const authors: FeedAuthor[] = [
     {
@@ -115,10 +120,13 @@ export async function loadFeedPosts(viewer: UserProfile): Promise<FeedPost[]> {
 
   const fetched = await Promise.all(
     authors.map(async (author) => {
-      const items = await listExpenses(author.uid);
-      return items.filter(isVisibleInFeed).filter((expense) => !isExpiredPublicPost(expense)).map(async (expense) => {
+      const [profile, items] = await Promise.all([getUserProfileByUid(author.uid), listExpenses(author.uid)]);
+      const budgetSnapshot = buildBudgetSnapshot(profile, items);
+      const visibleItems = items.filter(isVisibleInFeed).filter((expense) => !isExpiredPublicPost(expense) || author.uid === viewer.uid);
+
+      return visibleItems.map(async (expense) => {
         const likeSnapshot = await getDoc(doc(firebaseDb, "expenses", author.uid, "items", expense.id, LIKES_SUBCOLLECTION, viewer.uid));
-        return buildPost(expense, author, viewer.uid, likeSnapshot.exists());
+        return buildPost(expense, author, viewer.uid, likeSnapshot.exists(), budgetSnapshot.isOverBudget);
       });
     }),
   );
@@ -136,7 +144,7 @@ export function watchFeedComments(ownerUid: string, expenseId: string, onChange:
   });
 }
 
-export async function toggleFeedLike(input: { viewer: UserProfile; post: FeedPost }) {
+export async function toggleFeedLike(input: { viewer: FeedViewer; post: FeedPost }) {
   const expenseRef = doc(firebaseDb, "expenses", input.post.expense.userId, "items", input.post.expense.id);
   const likeRef = doc(firebaseDb, "expenses", input.post.expense.userId, "items", input.post.expense.id, LIKES_SUBCOLLECTION, input.viewer.uid);
   const existing = await getDoc(likeRef);
@@ -180,7 +188,7 @@ export async function toggleFeedLike(input: { viewer: UserProfile; post: FeedPos
   return { liked: true, likeCount: (input.post.expense.likeCount ?? 0) + 1 };
 }
 
-export async function addFeedComment(input: { viewer: UserProfile; post: FeedPost; text: string }) {
+export async function addFeedComment(input: { viewer: FeedViewer; post: FeedPost; text: string }) {
   const message = input.text.trim();
 
   if (!message) {
@@ -232,8 +240,3 @@ export async function addFeedComment(input: { viewer: UserProfile; post: FeedPos
   } satisfies FeedComment;
 }
 
-export async function purgeExpiredPublicPostsForViewer(viewer: UserProfile) {
-  const items = await listExpenses(viewer.uid);
-  const expiredItems = items.filter((expense) => expense.visibility === "public" && isExpiredPublicPost(expense));
-  await Promise.all(expiredItems.map((expense) => deleteExpense(viewer.uid, expense.id)));
-}

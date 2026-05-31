@@ -2,9 +2,15 @@ import { motion } from "framer-motion";
 import { ArrowDown, ArrowUp, TrendingUp, Eye, EyeOff, Smile, Coffee, ShoppingBag, Car, Utensils, Gamepad2, type LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { listExpenses } from "@/lib/expenses";
 import { getCategoryIcon, type CategoryIconName } from "@/lib/categories";
+import { buildBudgetSnapshot, notifyBudgetAlertIfNeeded, setMonthlyBudget, type BudgetSnapshot } from "@/lib/budget";
+import { getUserProfileByUid } from "@/lib/social";
 
 type DashboardExpense = {
   id: string;
@@ -76,53 +82,74 @@ export default function Dashboard() {
   const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(0);
   const [todayExpenseTotal, setTodayExpenseTotal] = useState(0);
   const [expenseCount, setExpenseCount] = useState(0);
+  const [budgetSnapshot, setBudgetSnapshot] = useState<BudgetSnapshot | null>(null);
+  const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
+  const [budgetInput, setBudgetInput] = useState("");
+  const [savingBudget, setSavingBudget] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const refreshDashboard = async () => {
+    if (!user) {
+      return;
+    }
+
+    const [profile, items] = await Promise.all([getUserProfileByUid(user.id), listExpenses(user.id)]);
+    const snapshot = buildBudgetSnapshot(profile, items);
+
+    const todayKey = getTodayKey();
+    const todayItems = items.filter((item) => item.expenseDate === todayKey);
+    const currentMonthItems = items.filter((item) => item.expenseDate.startsWith(snapshot.monthKey));
+
+    const currentMonthIncome = currentMonthItems
+      .filter((item) => item.transactionType === "income")
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const currentMonthExpense = currentMonthItems
+      .filter((item) => item.transactionType === "expense")
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const todayExpense = todayItems
+      .filter((item) => item.transactionType === "expense")
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    setBudgetSnapshot(snapshot);
+    setExpenseCount(items.length);
+    setMonthlyIncomeTotal(currentMonthIncome);
+    setMonthlyExpenseTotal(currentMonthExpense);
+    setTodayExpenseTotal(todayExpense);
+    setRecentItems(items.slice(0, 5).map((item) => ({
+      id: item.id,
+      category: item.category,
+      icon: getCategoryIconByLabel(item.category),
+      amount: item.transactionType === "income" ? item.amount : -item.amount,
+      time: formatRelativeTime(item.expenseDate),
+      mood: item.mood,
+      expenseDate: item.expenseDate,
+      color: item.transactionType === "income"
+        ? "bg-success/10 text-success"
+        : "bg-destructive/10 text-destructive",
+      transactionType: item.transactionType,
+    })));
+
+    if (snapshot.isOverBudget) {
+      void notifyBudgetAlertIfNeeded(user.id);
+    }
+  };
 
   useEffect(() => {
     if (!user) {
       return;
     }
 
-    listExpenses(user.id)
-      .then((items) => {
-        const todayKey = getTodayKey();
-        const monthKey = getMonthKey();
-        const currentMonthItems = items.filter((item) => item.expenseDate.startsWith(monthKey));
-        const todayItems = items.filter((item) => item.expenseDate === todayKey);
-
-        const currentMonthIncome = currentMonthItems
-          .filter((item) => item.transactionType === "income")
-          .reduce((sum, item) => sum + item.amount, 0);
-
-        const currentMonthExpense = currentMonthItems
-          .filter((item) => item.transactionType === "expense")
-          .reduce((sum, item) => sum + item.amount, 0);
-
-        const todayExpense = todayItems
-          .filter((item) => item.transactionType === "expense")
-          .reduce((sum, item) => sum + item.amount, 0);
-
-        setExpenseCount(items.length);
-        setMonthlyIncomeTotal(currentMonthIncome);
-        setMonthlyExpenseTotal(currentMonthExpense);
-        setTodayExpenseTotal(todayExpense);
-        setRecentItems(items.slice(0, 5).map((item) => ({
-          id: item.id,
-          category: item.category,
-          icon: getCategoryIconByLabel(item.category),
-          amount: item.transactionType === "income" ? item.amount : -item.amount,
-          time: formatRelativeTime(item.expenseDate),
-          mood: item.mood,
-          expenseDate: item.expenseDate,
-          color: item.transactionType === "income"
-            ? "bg-success/10 text-success"
-            : "bg-destructive/10 text-destructive",
-          transactionType: item.transactionType,
-        })));
-      })
-      .catch(() => undefined);
+    void refreshDashboard().catch(() => undefined);
   }, [user]);
+
+  useEffect(() => {
+    if (budgetSnapshot?.budgetLockedThisMonth) {
+      setBudgetInput(String(budgetSnapshot.monthlyBudgetAmount ?? ""));
+    }
+  }, [budgetSnapshot]);
 
   const currentMood = useMemo(() => {
     if (recentItems.length === 0) {
@@ -139,6 +166,39 @@ export default function Dashboard() {
 
   const monthlyBalance = monthlyIncomeTotal - monthlyExpenseTotal;
 
+  const handleOpenBudgetDialog = () => {
+    if (budgetSnapshot?.budgetLockedThisMonth) {
+      return;
+    }
+
+    setBudgetInput(budgetSnapshot?.monthlyBudgetAmount ? String(budgetSnapshot.monthlyBudgetAmount) : "");
+    setBudgetDialogOpen(true);
+  };
+
+  const handleSaveBudget = async () => {
+    if (!user) {
+      return;
+    }
+
+    const parsed = Number.parseFloat(budgetInput);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return;
+    }
+
+    setSavingBudget(true);
+    try {
+      await setMonthlyBudget(user.id, parsed);
+      await refreshDashboard();
+      setBudgetDialogOpen(false);
+      toast.success("本月預算已設定");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "預算設定失敗，請稍後再試。";
+      toast.error(message);
+    } finally {
+      setSavingBudget(false);
+    }
+  };
+
   return (
     <div className="max-w-lg mx-auto">
       {/* Header */}
@@ -148,6 +208,15 @@ export default function Dashboard() {
             <p className="text-primary-foreground/70 text-sm">你好！{user?.name ?? "匿名用戶"}</p>
             <h1 className="text-xl font-bold text-primary-foreground">我的記帳看板</h1>
           </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleOpenBudgetDialog}
+            disabled={budgetSnapshot?.budgetLockedThisMonth}
+          >
+            {budgetSnapshot?.budgetLockedThisMonth ? "本月預算已設定" : "設定本月預算"}
+          </Button>
         </div>
 
         {/* Balance Card */}
@@ -166,9 +235,15 @@ export default function Dashboard() {
               )}
             </button>
           </div>
-          <p className="text-3xl font-bold text-primary-foreground mb-4">
-            {balanceVisible ? `NT$ ${monthlyBalance.toLocaleString()}` : "••••••"}
-          </p>
+          <div className="flex items-end ">
+            <p className="text-3xl font-bold text-primary-foreground mb-4">
+              {balanceVisible ? `NT$ ${monthlyBalance.toLocaleString()}` : "••••••"} 
+            </p>
+            <p className="text-3xl font-bold text-primary-foreground mb-4 opacity-50">
+              /{budgetSnapshot?.monthlyBudgetAmount ? ` ${budgetSnapshot.monthlyBudgetAmount.toLocaleString()}` : "--"}
+            </p>
+          </div>
+          
           <div className="flex gap-4">
             <div className="flex items-center gap-1.5">
               <div className="w-6 h-6 rounded-full bg-success/30 flex items-center justify-center">
@@ -211,7 +286,14 @@ export default function Dashboard() {
             className="bg-card rounded-xl p-3 shadow-card"
           >
             <p className="text-[10px] text-muted-foreground">{stat.label}</p>
-            <p className="text-lg font-bold mt-1">{stat.value}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <p className="text-lg font-bold">{stat.value}</p>
+              {stat.label === "心情" && budgetSnapshot?.isOverBudget && (
+                <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                  超支啦!!
+                </span>
+              )}
+            </div>
             <p className="text-[10px] text-success mt-0.5">{stat.trend}</p>
           </motion.div>
         ))}
@@ -257,6 +339,37 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      <Dialog open={budgetDialogOpen} onOpenChange={setBudgetDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>設定本月預算</DialogTitle>
+            <DialogDescription>
+              設定後，本月內不可修改；若超支，系統會提醒你與你的好友。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              type="number"
+              min="1"
+              value={budgetInput}
+              onChange={(event) => setBudgetInput(event.target.value)}
+              placeholder="請輸入本月預算金額"
+            />
+            <p className="text-[10px] text-muted-foreground">
+              目前本月支出：NT$ {monthlyExpenseTotal.toLocaleString()}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setBudgetDialogOpen(false)}>
+              取消
+            </Button>
+            <Button type="button" onClick={handleSaveBudget} disabled={savingBudget}>
+              {savingBudget ? "儲存中" : "儲存預算"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

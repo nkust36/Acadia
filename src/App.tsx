@@ -7,6 +7,7 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { ProtectedRoute, PublicOnlyRoute } from "@/auth/RouteGuards";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
+import Analysis from "@/pages/Analysis";
 import AddExpense from "@/pages/AddExpense";
 import CategorySettings from "@/pages/CategorySettings";
 import Feed from "@/pages/Feed";
@@ -14,7 +15,10 @@ import Login from "@/pages/Login";
 import ExpenseDetail from "@/pages/ExpenseDetail";
 import Records from "@/pages/Records";
 import Plaza from "@/pages/Plaza";
+import Friends from "@/pages/Friends";
+import Chat from "@/pages/Chat";
 import Profile from "@/pages/Profile";
+import Notifications from "@/pages/Notifications";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,12 +47,17 @@ function AppRoutes() {
 
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/analysis" element={<Analysis />} />
         <Route path="/add" element={<AddExpense />} />
         <Route path="/categories" element={<CategorySettings />} />
         <Route path="/feed" element={<Feed />} />
         <Route path="/records/:expenseId" element={<ExpenseDetail />} />
         <Route path="/records" element={<Records />} />
         <Route path="/plaza" element={<Plaza />} />
+        <Route path="/friends" element={<Friends />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/chat/:friendUid" element={<Chat />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="*" element={<NotFound />} />
       </Route>

@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   addFeedComment,
   loadFeedPosts,
-  purgeExpiredPublicPostsForViewer,
   toggleFeedLike,
   watchFeedComments,
   type FeedComment,
@@ -100,7 +99,6 @@ export default function Feed() {
       setIsLoading(true);
 
       try {
-        await purgeExpiredPublicPostsForViewer(user).catch(() => undefined);
         const nextPosts = await loadFeedPosts(user);
 
         if (active) {
@@ -285,6 +283,11 @@ export default function Feed() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold truncate">{post.authorName}</p>
+                      {post.authorOverBudget && (
+                        <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                          已超支
+                        </span>
+                      )}
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                         {post.expense.visibility === "public" ? "公開" : "好友"}
                       </span>
