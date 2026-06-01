@@ -7,3 +7,13 @@ interface ImportMetaEnv {
 interface ImportMeta {
 	readonly env: ImportMetaEnv;
 }
+
+declare module "@/pages/ProfileSettings" {
+	const ProfileSettings: any;
+	export default ProfileSettings;
+}
+
+declare module "@/pages/ProfileSettingsPage" {
+	const ProfileSettingsPage: any;
+	export default ProfileSettingsPage;
+}

@@ -39,6 +39,7 @@ type AuthContextValue = {
   registerWithEmail: (name: string, email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUserProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -122,6 +123,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(firebaseAuth);
   };
 
+  const refreshUserProfile = async () => {
+    const firebaseUser = firebaseAuth.currentUser;
+
+    if (!firebaseUser) {
+      setUser(null);
+      return;
+    }
+
+    const profile = await ensureUserProfile(firebaseUser);
+    setUser({
+      ...profileToAuthUser(profile),
+      emailVerified: firebaseUser.emailVerified,
+    });
+  };
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -131,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       registerWithEmail,
       resetPassword,
       logout,
+      refreshUserProfile,
     }),
     [user]
   );

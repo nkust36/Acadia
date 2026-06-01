@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowDown, ArrowUp, Clock, MessageCircle, Send, Sparkles, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
@@ -58,6 +59,7 @@ function getRankingLabel(post: PlazaPost) {
 
 export default function Plaza() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<PlazaPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [votingPostId, setVotingPostId] = useState<string | null>(null);
@@ -250,9 +252,13 @@ export default function Plaza() {
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="h-10 w-10 rounded-full gradient-warm flex items-center justify-center overflow-hidden shrink-0">
                       {post.authorPicture ? (
-                        <img src={post.authorPicture} alt={post.authorName} className="h-full w-full object-cover" />
+                        <button type="button" onClick={() => navigate(`/profile/${post.authorUid}`)} className="h-full w-full overflow-hidden">
+                          <img src={post.authorPicture} alt={post.authorName} className="h-full w-full object-cover" />
+                        </button>
                       ) : (
-                        <User className="h-5 w-5 text-primary-foreground" />
+                        <button type="button" onClick={() => navigate(`/profile/${post.authorUid}`)} className="flex h-full w-full items-center justify-center">
+                          <User className="h-5 w-5 text-primary-foreground" />
+                        </button>
                       )}
                     </div>
                     <div className="min-w-0">
@@ -356,11 +362,13 @@ export default function Plaza() {
                 comments.map((comment) => (
                   <div key={comment.id} className="flex items-start gap-3 rounded-2xl bg-muted/20 p-3">
                     {comment.userPicture ? (
-                      <img src={comment.userPicture} alt={comment.userName} className="h-9 w-9 rounded-full object-cover" />
+                      <button type="button" onClick={() => navigate(`/profile/${comment.userId}`)} className="h-9 w-9 rounded-full overflow-hidden">
+                        <img src={comment.userPicture} alt={comment.userName} className="h-full w-full object-cover" />
+                      </button>
                     ) : (
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-background text-sm">
+                      <button type="button" onClick={() => navigate(`/profile/${comment.userId}`)} className="flex h-9 w-9 items-center justify-center rounded-full bg-background text-sm">
                         {comment.userName.slice(0, 1)}
-                      </div>
+                      </button>
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">

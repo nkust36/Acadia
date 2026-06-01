@@ -87,7 +87,7 @@ export default function Profile() {
 
   const menuItems = [
     { icon: MessageCircle, label: "聊天室", desc: "一對一訊息", onClick: () => navigate("/chat") },
-    { icon: Shield, label: "隱私與安全", desc: "資料保護設定" },
+    { icon: Shield, label: "隱私與安全", desc: "資料保護設定", onClick: () => navigate("/profile/privacy") },
     { icon: HelpCircle, label: "幫助中心", desc: "常見問題" },
   ];
 
@@ -236,7 +236,12 @@ export default function Profile() {
               </span>
             </div>
           </div>
-          <button className="w-9 h-9 rounded-full bg-muted flex items-center justify-center" type="button">
+          <button
+            className="w-9 h-9 rounded-full bg-muted flex items-center justify-center"
+            type="button"
+            onClick={() => navigate("/profile/settings")}
+            aria-label="編輯個人資料"
+          >
             <Settings className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
@@ -293,13 +298,15 @@ export default function Profile() {
           <div className="mt-4 rounded-2xl border border-border bg-muted/30 p-4">
             <div className="flex items-center gap-3">
               {searchResult.picture ? (
-                <img
-                  src={searchResult.picture}
-                  alt={searchResult.name}
-                  className="w-11 h-11 rounded-full object-cover"
-                />
+                <button type="button" onClick={() => navigate(`/profile/${searchResult.uid}`)} className="w-11 h-11 rounded-full overflow-hidden">
+                  <img
+                    src={searchResult.picture}
+                    alt={searchResult.name}
+                    className="w-11 h-11 object-cover"
+                  />
+                </button>
               ) : (
-                <div className="w-11 h-11 rounded-full gradient-warm flex items-center justify-center">👤</div>
+                <button type="button" onClick={() => navigate(`/profile/${searchResult.uid}`)} className="w-11 h-11 rounded-full gradient-warm flex items-center justify-center">👤</button>
               )}
               <div className="flex-1 min-w-0">
                 <p className="font-semibold truncate">{searchResult.name}</p>

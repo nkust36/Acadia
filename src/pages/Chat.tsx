@@ -179,28 +179,35 @@ export default function Chat() {
           ) : (
             <div className="space-y-2">
               {friends.map((friend, index) => (
-                <motion.button
+                <motion.div
                   key={friend.id}
-                  type="button"
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: index * 0.04 }}
-                  onClick={() => navigate(`/chat/${friend.friendUid}`)}
                   className="flex w-full items-center gap-3 rounded-2xl bg-muted/30 p-3 text-left"
+                  onClick={() => navigate(`/chat/${friend.friendUid}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter") navigate(`/chat/${friend.friendUid}`); }}
                 >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full gradient-warm text-lg">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/profile/${friend.friendUid}`); }}
+                    className="flex h-11 w-11 items-center justify-center rounded-full overflow-hidden shrink-0"
+                    aria-label={`查看 ${friend.friendName} 的個人檔案`}
+                  >
                     {friend.friendPicture ? (
-                      <img src={friend.friendPicture} alt={friend.friendName} className="h-11 w-11 rounded-full object-cover" />
+                      <img src={friend.friendPicture} alt={friend.friendName} className="h-11 w-11 object-cover" />
                     ) : (
                       <User className="h-5 w-5 text-primary-foreground" />
                     )}
-                  </div>
+                  </button>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-sm">{friend.friendName}</p>
                     <p className="truncate text-[10px] text-muted-foreground">{friend.friendId}</p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </motion.button>
+                </motion.div>
               ))}
             </div>
           )}
@@ -222,13 +229,22 @@ export default function Chat() {
         </button>
         <div className="min-w-0 flex items-center gap-3">
             {selectedFriend?.friendPicture || friendProfile?.picture ? (
-              <img
-                src={selectedFriend?.friendPicture ?? friendProfile?.picture}
-                alt={selectedFriend?.friendName ?? friendProfile?.name ?? "聊天對象"}
-                className="h-11 w-11 rounded-full object-cover"
-              />
+              <button
+                type="button"
+                onClick={() => navigate(`/profile/${selectedFriend?.friendUid ?? friendUid}`)}
+                className="h-11 w-11 rounded-full overflow-hidden"
+                aria-label="查看對方個人檔案"
+              >
+                <img
+                  src={selectedFriend?.friendPicture ?? friendProfile?.picture}
+                  alt={selectedFriend?.friendName ?? friendProfile?.name ?? "聊天對象"}
+                  className="h-full w-full object-cover"
+                />
+              </button>
             ) : (
-              <User className="h-5 w-5 text-primary-foreground" />
+              <button type="button" onClick={() => navigate(`/profile/${selectedFriend?.friendUid ?? friendUid}`)} className="h-5 w-5 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary-foreground" />
+              </button>
             )}
           <h1 className="truncate text-lg font-bold">{selectedFriend?.friendName ?? friendProfile?.name ?? "聊天對象"}</h1>
         </div>

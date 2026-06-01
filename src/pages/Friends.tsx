@@ -115,9 +115,18 @@ export default function Friends() {
           <div className="space-y-2">
             {filteredFriends.map((friend) => (
               <div key={friend.id} className="flex items-center gap-3 rounded-2xl bg-muted/30 p-3">
-                <div className="w-10 h-10 rounded-full gradient-warm flex items-center justify-center text-lg">
-                  {friend.friendPicture ? null : "👥"}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/profile/${friend.friendUid}`)}
+                  className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center shrink-0"
+                  aria-label={`查看 ${friend.friendName} 的個人檔案`}
+                >
+                  {friend.friendPicture ? (
+                    <img src={friend.friendPicture} alt={friend.friendName} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full gradient-warm flex items-center justify-center text-lg">👥</div>
+                  )}
+                </button>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{friend.friendName}</p>
                   <p className="text-[10px] text-muted-foreground truncate">{friend.friendId}</p>

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { Clock3, Heart, MessageCircle, Send, Sparkles, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
@@ -65,6 +66,7 @@ function getPostExpiryLabel(post: FeedPost) {
 
 export default function Feed() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -270,15 +272,21 @@ export default function Feed() {
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div className="flex items-center gap-3 min-w-0">
                   {post.authorPicture ? (
-                    <img
-                      src={post.authorPicture}
-                      alt={post.authorName}
-                      className="h-11 w-11 rounded-full object-cover"
-                    />
+                    <button type="button" onClick={() => navigate(`/profile/${post.authorUid}`)} className="h-11 w-11 rounded-full overflow-hidden">
+                      <img
+                        src={post.authorPicture}
+                        alt={post.authorName}
+                        className="h-full w-full object-cover"
+                      />
+                    </button>
                   ) : (
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full gradient-warm text-lg">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/profile/${post.authorUid}`)}
+                      className="flex h-11 w-11 items-center justify-center rounded-full gradient-warm text-lg"
+                    >
                       {post.isSelf ? <User className="h-5 w-5 text-primary-foreground" /> : "👤"}
-                    </div>
+                    </button>
                   )}
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -372,9 +380,11 @@ export default function Feed() {
                 comments.map((comment) => (
                   <div key={comment.id} className="flex items-start gap-3 rounded-2xl bg-muted/20 p-3">
                     {comment.userPicture ? (
-                      <img src={comment.userPicture} alt={comment.userName} className="h-9 w-9 rounded-full object-cover" />
+                      <button type="button" onClick={() => navigate(`/profile/${comment.userId}`)} className="h-9 w-9 rounded-full overflow-hidden">
+                        <img src={comment.userPicture} alt={comment.userName} className="h-full w-full object-cover" />
+                      </button>
                     ) : (
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-background text-sm">{comment.userName.slice(0, 1)}</div>
+                      <button type="button" onClick={() => navigate(`/profile/${comment.userId}`)} className="flex h-9 w-9 items-center justify-center rounded-full bg-background text-sm">{comment.userName.slice(0, 1)}</button>
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">

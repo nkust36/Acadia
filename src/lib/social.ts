@@ -22,6 +22,15 @@ const FRIEND_REQUESTS_COLLECTION = "friendRequests";
 const FRIENDS_COLLECTION = "friends";
 const NOTIFICATIONS_COLLECTION = "notifications";
 
+export type UserGender = "male" | "female" | "other" | "prefer_not_to_say";
+
+export type ProfilePrivacySettings = {
+  hideFriendIdFromOthers: boolean;
+  hideBudgetStatusFromOthers: boolean;
+  hidePieChartFromOthers: boolean;
+  hideDailyAverageFromOthers: boolean;
+};
+
 export type UserProfile = {
   uid: string;
   friendId: string;
@@ -31,6 +40,13 @@ export type UserProfile = {
   provider: "google" | "email";
   createdAt: string;
   updatedAt: string;
+  nameUpdatedAt?: string;
+  gender?: UserGender;
+  age?: number;
+  hideFriendIdFromOthers: boolean;
+  hideBudgetStatusFromOthers: boolean;
+  hidePieChartFromOthers: boolean;
+  hideDailyAverageFromOthers: boolean;
   monthlyBudgetAmount?: number;
   monthlyBudgetMonthKey?: string;
   budgetAlertMonthKey?: string;
@@ -108,6 +124,16 @@ function mapUserProfile(id: string, data: Record<string, unknown>): UserProfile 
     provider: data.provider === "google" ? "google" : "email",
     createdAt: readString(data.createdAt, new Date().toISOString()),
     updatedAt: readString(data.updatedAt, new Date().toISOString()),
+    nameUpdatedAt: typeof data.nameUpdatedAt === "string" ? data.nameUpdatedAt : undefined,
+    gender:
+      data.gender === "male" || data.gender === "female" || data.gender === "other" || data.gender === "prefer_not_to_say"
+        ? data.gender
+        : undefined,
+    age: typeof data.age === "number" ? data.age : undefined,
+    hideFriendIdFromOthers: Boolean(data.hideFriendIdFromOthers),
+    hideBudgetStatusFromOthers: Boolean(data.hideBudgetStatusFromOthers),
+    hidePieChartFromOthers: Boolean(data.hidePieChartFromOthers),
+    hideDailyAverageFromOthers: Boolean(data.hideDailyAverageFromOthers),
     monthlyBudgetAmount: typeof data.monthlyBudgetAmount === "number" ? data.monthlyBudgetAmount : undefined,
     monthlyBudgetMonthKey: typeof data.monthlyBudgetMonthKey === "string" ? data.monthlyBudgetMonthKey : undefined,
     budgetAlertMonthKey: typeof data.budgetAlertMonthKey === "string" ? data.budgetAlertMonthKey : undefined,
@@ -244,6 +270,11 @@ export async function ensureUserProfile(firebaseUser: User): Promise<UserProfile
     provider: firebaseUser.providerData[0]?.providerId === "google.com" ? "google" : "email",
     createdAt: timestamp,
     updatedAt: timestamp,
+    nameUpdatedAt: timestamp,
+    hideFriendIdFromOthers: false,
+    hideBudgetStatusFromOthers: false,
+    hidePieChartFromOthers: false,
+    hideDailyAverageFromOthers: false,
   });
 
   await setDoc(profileRef, profile);

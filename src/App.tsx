@@ -18,6 +18,9 @@ import Plaza from "@/pages/Plaza";
 import Friends from "@/pages/Friends";
 import Chat from "@/pages/Chat";
 import Profile from "@/pages/Profile";
+import ProfileSettingsPage from "./pages/ProfileSettingsPage";
+import PrivacySettings from "@/pages/PrivacySettings";
+import UserProfile from "@/pages/UserProfile";
 import Notifications from "@/pages/Notifications";
 import NotFound from "@/pages/NotFound";
 
@@ -59,6 +62,9 @@ function AppRoutes() {
         <Route path="/chat/:friendUid" element={<Chat />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/settings" element={<ProfileSettingsPage />} />
+        <Route path="/profile/privacy" element={<PrivacySettings />} />
+        <Route path="/profile/:uid" element={<UserProfile />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
