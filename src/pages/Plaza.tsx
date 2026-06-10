@@ -8,7 +8,7 @@ import { ImagePreview } from "@/components/ImagePreview";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { addFeedComment, watchFeedComments, type FeedComment } from "@/lib/feed";
+import { addFeedComment, loadFeedCommentUsers, watchFeedComments, type FeedComment } from "@/lib/feed";
 import { loadPlazaPosts, votePlazaPost, type PlazaPost } from "@/lib/plaza";
 
 function formatMoney(amount: number) {
@@ -67,6 +67,7 @@ export default function Plaza() {
   const [comments, setComments] = useState<FeedComment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
+  const [commentUsers, setCommentUsers] = useState<Record<string, { name: string; picture?: string }>>({});
 
   useEffect(() => {
     if (!user) {
@@ -115,6 +116,40 @@ export default function Plaza() {
     return unsubscribe;
   }, [activePost?.authorUid, activePost?.expense.id]);
 
+  useEffect(() => {
+    if (comments.length === 0) {
+      setCommentUsers({});
+      return;
+    }
+
+    let active = true;
+
+    const loadUsers = async () => {
+      const users = await loadFeedCommentUsers(comments);
+      if (active) {
+        setCommentUsers(users);
+      }
+    };
+
+    void loadUsers();
+
+    return () => {
+      active = false;
+    };
+  }, [comments]);
+
+  const renderedComments = useMemo(
+    () => comments.map((comment) => {
+      const latestUser = commentUsers[comment.userId];
+      return {
+        ...comment,
+        userName: latestUser?.name || comment.userName,
+        userPicture: latestUser?.picture ?? comment.userPicture,
+      };
+    }),
+    [commentUsers, comments],
+  );
+
   const handleOpenComments = (post: PlazaPost) => {
     setActivePost(post);
     setCommentText("");
@@ -157,7 +192,7 @@ export default function Plaza() {
             : item,
         ),
       );
-      toast.success(activePost.authorUid === user.uid ? "留言已送出" : "留言已送出，對方會收到通知");
+      toast.success(activePost.authorUid === user.uid ? "留言已送出" : "留言已送出");
     } catch (error) {
       const message = error instanceof Error ? error.message : "留言失敗，請再試一次。";
       toast.error(message);
@@ -208,7 +243,7 @@ export default function Plaza() {
         <div>
           <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground mb-2">Global Plaza</p>
           <h1 className="text-2xl font-bold">全球消費廣場</h1>
-          <p className="text-sm text-muted-foreground mt-1">所有公開貼文都會出現在這裡，依投票分數排序。</p>
+          <p className="text-sm text-muted-foreground mt-1">所有公開貼文都會出現在這裡。</p>
         </div>
         <div className="rounded-2xl bg-card shadow-card px-4 py-3 text-right">
           <p className="text-xs text-muted-foreground">公開貼文</p>
@@ -232,7 +267,7 @@ export default function Plaza() {
             <Sparkles className="h-6 w-6 text-muted-foreground" />
           </div>
           <h2 className="text-lg font-semibold">暫時沒有公開貼文</h2>
-          <p className="mt-2 text-sm text-muted-foreground">等有人發公開記帳，這裡就會出現並依票數重新排序。</p>
+          <p className="mt-2 text-sm text-muted-foreground">等有人發公開記帳。</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -354,12 +389,12 @@ export default function Plaza() {
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-              {comments.length === 0 ? (
+              {renderedComments.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-5 text-center text-sm text-muted-foreground">
                   尚無留言
                 </div>
               ) : (
-                comments.map((comment) => (
+                renderedComments.map((comment) => (
                   <div key={comment.id} className="flex items-start gap-3 rounded-2xl bg-muted/20 p-3">
                     {comment.userPicture ? (
                       <button type="button" onClick={() => navigate(`/profile/${comment.userId}`)} className="h-9 w-9 rounded-full overflow-hidden">

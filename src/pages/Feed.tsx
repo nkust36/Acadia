@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Textarea } from "@/components/ui/textarea";
 import {
   addFeedComment,
+  loadFeedCommentUsers,
   loadFeedPosts,
   toggleFeedLike,
   watchFeedComments,
@@ -132,6 +133,42 @@ export default function Feed() {
     const unsubscribe = watchFeedComments(activePost.authorUid, activePost.expense.id, setComments);
     return unsubscribe;
   }, [activePost?.authorUid, activePost?.expense.id]);
+
+  const [commentUsers, setCommentUsers] = useState<Record<string, { name: string; picture?: string }>>({});
+
+  useEffect(() => {
+    if (comments.length === 0) {
+      setCommentUsers({});
+      return;
+    }
+
+    let active = true;
+
+    const loadUsers = async () => {
+      const users = await loadFeedCommentUsers(comments);
+      if (active) {
+        setCommentUsers(users);
+      }
+    };
+
+    void loadUsers();
+
+    return () => {
+      active = false;
+    };
+  }, [comments]);
+
+  const renderedComments = useMemo(
+    () => comments.map((comment) => {
+      const latestUser = commentUsers[comment.userId];
+      return {
+        ...comment,
+        userName: latestUser?.name || comment.userName,
+        userPicture: latestUser?.picture ?? comment.userPicture,
+      };
+    }),
+    [commentUsers, comments],
+  );
 
   const visibleCount = useMemo(() => posts.length, [posts]);
 
@@ -372,12 +409,12 @@ export default function Feed() {
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-              {comments.length === 0 ? (
+              {renderedComments.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-5 text-center text-sm text-muted-foreground">
                   尚無留言
                 </div>
               ) : (
-                comments.map((comment) => (
+                renderedComments.map((comment) => (
                   <div key={comment.id} className="flex items-start gap-3 rounded-2xl bg-muted/20 p-3">
                     {comment.userPicture ? (
                       <button type="button" onClick={() => navigate(`/profile/${comment.userId}`)} className="h-9 w-9 rounded-full overflow-hidden">

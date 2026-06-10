@@ -97,10 +97,9 @@ export default function Login() {
           <Lock className="w-7 h-7 text-primary-foreground" />
         </div>
 
-        <h1 className="text-2xl font-bold mb-2">登入後才能進入記帳主畫面</h1>
-        <p className="text-sm text-muted-foreground mb-6">
-          已改成 Firebase Auth，Email、Google 登入都直接串雲端，不再依賴本機 demo 帳號。
-        </p>
+        <h1 className="text-2xl font-bold mb-2">登入</h1>
+        <br />
+        
 
         <div className="mb-6 rounded-2xl border border-border bg-muted/30 p-1 flex gap-1">
           <button
@@ -216,12 +215,7 @@ export default function Login() {
           使用 Google 登入
         </button>
 
-        <div className="mt-4 flex items-center gap-2 rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground">
-          <UserPlus className="w-4 h-4 text-success" />
-          <p>
-            註冊完成後會直接建立 Firebase 帳號；這裡不再把帳號存在 localStorage。
-          </p>
-        </div>
+        
 
         <button
           type="button"
@@ -232,12 +226,7 @@ export default function Login() {
           {isSendingReset ? "寄送中..." : "忘記密碼？寄送重設信"}
         </button>
 
-        <div className="mt-4 rounded-xl bg-muted/50 p-3 flex gap-2">
-          <ShieldCheck className="w-4 h-4 text-success mt-0.5" />
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Firebase 已負責登入狀態與帳號驗證。若要做正式版，接下來重點是 Firestore 安全規則與 Storage 規則。
-          </p>
-        </div>
+    
       </div>
     </div>
   );

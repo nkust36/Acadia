@@ -28,6 +28,13 @@ type PlazaAuthor = {
 
 type PlazaViewer = Pick<UserProfile, "uid">;
 
+type PlazaVoteResult = {
+  viewerVote: -1 | 0 | 1;
+  upvoteCount: number;
+  downvoteCount: number;
+  score: number;
+};
+
 function parseTime(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
@@ -99,7 +106,7 @@ export async function loadPlazaPosts(viewer: PlazaViewer): Promise<PlazaPost[]> 
   return posts.sort(sortPlazaPosts);
 }
 
-export async function votePlazaPost(input: { viewer: PlazaViewer; post: PlazaPost; vote: -1 | 1 }) {
+export async function votePlazaPost(input: { viewer: PlazaViewer; post: PlazaPost; vote: -1 | 1 }): Promise<PlazaVoteResult> {
   const expenseRef = doc(firebaseDb, "expenses", input.post.expense.userId, "items", input.post.expense.id);
   const voteRef = doc(firebaseDb, "expenses", input.post.expense.userId, "items", input.post.expense.id, PLAZA_VOTES_SUBCOLLECTION, input.viewer.uid);
   const currentVote = input.post.viewerVote;

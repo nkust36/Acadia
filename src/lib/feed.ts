@@ -17,6 +17,11 @@ export type FeedComment = {
   createdAt: string;
 };
 
+export type FeedCommentUser = {
+  name: string;
+  picture?: string;
+};
+
 export type FeedPost = {
   expense: ExpenseRecord;
   authorUid: string;
@@ -37,6 +42,13 @@ type FeedAuthor = {
 };
 
 type FeedViewer = Pick<UserProfile, "uid" | "friendId" | "name" | "picture">;
+
+type FeedCommentTargetPost = {
+  expense: Pick<ExpenseRecord, "id" | "userId" | "category" | "amount">;
+  authorFriendId: string;
+  authorName: string;
+  authorPicture?: string;
+};
 
 function parseTime(value: string) {
   const date = new Date(value);
@@ -144,6 +156,35 @@ export function watchFeedComments(ownerUid: string, expenseId: string, onChange:
   });
 }
 
+export async function loadFeedCommentUsers(comments: FeedComment[]) {
+  const userIds = Array.from(new Set(comments.map((comment) => comment.userId).filter(Boolean)));
+  const entries = await Promise.all(userIds.map(async (userId) => {
+    try {
+      const profile = await getUserProfileByUid(userId);
+      return [userId, {
+        name: profile?.name,
+        picture: profile?.picture,
+      }] as const;
+    } catch {
+      return [userId, {}] as const;
+    }
+  }));
+
+  return entries.reduce<Record<string, FeedCommentUser>>((result, [userId, profile]) => {
+    const hasName = typeof profile.name === "string" && profile.name.trim().length > 0;
+    const hasPicture = typeof profile.picture === "string" && profile.picture.length > 0;
+
+    if (hasName || hasPicture) {
+      result[userId] = {
+        name: hasName ? profile.name : "匿名留言者",
+        picture: hasPicture ? profile.picture : undefined,
+      };
+    }
+
+    return result;
+  }, {});
+}
+
 export async function toggleFeedLike(input: { viewer: FeedViewer; post: FeedPost }) {
   const expenseRef = doc(firebaseDb, "expenses", input.post.expense.userId, "items", input.post.expense.id);
   const likeRef = doc(firebaseDb, "expenses", input.post.expense.userId, "items", input.post.expense.id, LIKES_SUBCOLLECTION, input.viewer.uid);
@@ -188,7 +229,7 @@ export async function toggleFeedLike(input: { viewer: FeedViewer; post: FeedPost
   return { liked: true, likeCount: (input.post.expense.likeCount ?? 0) + 1 };
 }
 
-export async function addFeedComment(input: { viewer: FeedViewer; post: FeedPost; text: string }) {
+export async function addFeedComment(input: { viewer: FeedViewer; post: FeedCommentTargetPost; text: string }) {
   const message = input.text.trim();
 
   if (!message) {
