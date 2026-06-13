@@ -8,14 +8,20 @@
 npm install
 ```
 
-2. 建立 `.env` 並設定 Firebase 參數
+2. 複製 `.env.example` 為 `.env`，再填入你的 Firebase 與 Google 登入設定
 
 ```bash
+cp .env.example .env
+```
+
+```dotenv
 VITE_FIREBASE_API_KEY=your-api-key
 VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your-project-id
 VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 VITE_FIREBASE_APP_ID=your-app-id
+VITE_GOOGLE_CLIENT_ID=your-google-client-id
+VITE_ENABLE_FIREBASE_STORAGE_SYNC=false
 ```
 
 3. 啟動專案
@@ -31,7 +37,7 @@ npm run dev
 1. 到 Firebase Console 建立一個 Firebase 專案。
 2. 在 Authentication 中啟用 Email/Password 和 Google 登入。
 3. 建立 Firestore Database 與 Storage Bucket。
-4. 把上面列出的環境變數加入本機 `.env` 檔案。
+4. 在本機 `.env` 中補齊或覆蓋必要的環境變數。
 5. 設定完成後重新啟動開發伺服器。
 
 建議的開發規則：
